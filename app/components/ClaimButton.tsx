@@ -33,11 +33,25 @@ export function ClaimButton({
     setMsg(null);
     try {
       const wallet = publicKey.toBase58();
-      const { transactionBase64 } = await api.claimIntent({ marketId: market.id, wallet, outcome });
-      const sig = await signSendConfirm(connection, sendTransaction, transactionBase64);
+      const intent = await api.claimIntent({ marketId: market.id, wallet, outcome });
+      const sig = await signSendConfirm(connection, sendTransaction, intent.transactionBase64);
+      // Record the claim so the button retires and a re-click can't build an
+      // AlreadyClaimed tx. Best-effort — the payout already landed on-chain.
+      try {
+        await api.claimConfirm({ marketId: market.id, wallet, outcome: intent.outcome });
+      } catch {
+        /* non-fatal — chain is the source of truth */
+      }
       setMsg({ ok: true, text: `${verb} succeeded.`, sig });
       onDone?.();
     } catch (e) {
+      // Already claimed (409) is a success, not a failure — the payout is
+      // already in the wallet. Refresh so the button retires.
+      if (e instanceof ApiError && e.status === 409) {
+        setMsg({ ok: true, text: e.message });
+        onDone?.();
+        return;
+      }
       const text =
         e instanceof ApiError
           ? e.message

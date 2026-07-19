@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { json, fail } from "@/lib/http";
-import { getMarket, listPositions } from "@/lib/db";
-import { buildClaimTx, fetchMarketOnchain } from "@/lib/onchain/program";
+import { getMarket, listPositions, markPositionClaimed } from "@/lib/db";
+import { buildClaimTx, fetchMarketOnchain, fetchPositionOnchain } from "@/lib/onchain/program";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +39,16 @@ export async function POST(request: Request) {
     } else {
       // Refunding: claim the first (or only) position.
       outcome = userPositions[0].outcome;
+    }
+
+    // Chain is the source of truth for whether this stake was already claimed.
+    // We never recorded claims in the DB before, so a re-click would build a tx
+    // that reverts with AlreadyClaimed ("Failed to simulate" in the wallet).
+    // Detect it up front, self-heal the DB, and return a clean message.
+    const onchainPos = await fetchPositionOnchain(market.marketPda, body.wallet, outcome);
+    if (onchainPos?.claimed) {
+      markPositionClaimed(market.id, body.wallet, outcome);
+      return json({ error: "Already claimed — this stake is already back in your wallet." }, 409);
     }
 
     const built = await buildClaimTx({

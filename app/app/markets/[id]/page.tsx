@@ -71,6 +71,14 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
   const myPositions = publicKey
     ? positions.filter((p) => p.wallet === publicKey.toBase58())
     : [];
+  // Only surface the standalone Claim card when this wallet actually has
+  // something to pull: an unclaimed stake that's a refund or the winner.
+  const hasClaimable = myPositions.some(
+    (p) =>
+      !p.claimed &&
+      (market.status === "REFUNDING" ||
+        (market.status === "SETTLED" && p.outcome === market.winningOutcome)),
+  );
 
   return (
     <div className="space-y-6">
@@ -150,7 +158,7 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
 
         {/* claim + positions */}
         <div className="space-y-6">
-          {settled ? (
+          {settled && hasClaimable ? (
             <Card>
               <h3 className="mb-3 font-semibold text-white">Claim</h3>
               <ClaimButton market={market} onDone={load} />

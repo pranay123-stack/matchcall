@@ -204,9 +204,10 @@ export function upsertPosition(input: {
 
 const SET_POSITION = `
   INSERT INTO positions (marketId, wallet, outcome, amount, claimed, signature)
-  VALUES (@marketId, @wallet, @outcome, @amount, 0, @signature)
+  VALUES (@marketId, @wallet, @outcome, @amount, @claimed, @signature)
   ON CONFLICT (marketId, wallet, outcome) DO UPDATE SET
     amount = excluded.amount,
+    claimed = excluded.claimed,
     signature = excluded.signature`;
 
 /** Set a position's amount to an exact value (on-chain cumulative total). */
@@ -216,8 +217,9 @@ export function setPosition(input: {
   outcome: number;
   amount: number; // base units
   signature: string;
+  claimed?: boolean; // on-chain claimed flag (defaults to unclaimed)
 }): PositionRow {
-  prep(SET_POSITION).run(input);
+  prep(SET_POSITION).run({ ...input, claimed: input.claimed ? 1 : 0 });
   return getPosition(input.marketId, input.wallet, input.outcome)!;
 }
 

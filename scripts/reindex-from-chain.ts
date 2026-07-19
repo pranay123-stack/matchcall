@@ -62,7 +62,7 @@ async function main() {
   for (const p of positions) {
     const id = pdaToId.get(p.marketPda);
     if (!id) continue;
-    setPosition({ marketId: id, wallet: p.wallet, outcome: p.outcome, amount: p.amount, signature: "" });
+    setPosition({ marketId: id, wallet: p.wallet, outcome: p.outcome, amount: p.amount, signature: "", claimed: p.claimed });
     pos += 1;
   }
 

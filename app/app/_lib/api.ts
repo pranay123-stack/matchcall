@@ -200,7 +200,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
   claimIntent: (body: { marketId: string; wallet: string; outcome?: number }) =>
-    jsonFetch<{ transactionBase64: string }>("/api/claims/intent", {
+    jsonFetch<{ transactionBase64: string; outcome: number }>("/api/claims/intent", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  claimConfirm: (body: { marketId: string; wallet: string; outcome: number }) =>
+    jsonFetch<{ ok: boolean }>("/api/claims/confirm", {
       method: "POST",
       body: JSON.stringify(body),
     }),

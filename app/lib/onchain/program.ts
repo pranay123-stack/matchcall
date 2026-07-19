@@ -242,6 +242,21 @@ export function positionPda(market: PublicKey, user: PublicKey, outcome: number)
   )[0];
 }
 
+/** Chain truth for a single position — used to detect an already-claimed stake. */
+export async function fetchPositionOnchain(
+  marketPda: string,
+  wallet: string,
+  outcome: number
+): Promise<{ amount: bigint; claimed: boolean } | null> {
+  const market = new PublicKey(marketPda);
+  const user = new PublicKey(wallet);
+  const pda = positionPda(market, user, outcome);
+  const info = await rpc().getAccountInfo(pda, "confirmed");
+  if (!info) return null;
+  const p = decodePosition(info.data);
+  return { amount: p.amount, claimed: p.claimed };
+}
+
 export function marketEscrow(market: PublicKey): PublicKey {
   // ATA of the market PDA (off-curve owner) for the mUSDC mint, classic token program.
   return getAssociatedTokenAddressSync(
