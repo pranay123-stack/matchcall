@@ -12,6 +12,27 @@ pari-mutuel payout. No trusted admin ever picks the winner.
 > Program ID (devnet): `DuB3yJQMPWCESJoEzShBWt1Jc3Q6j6DXLyi1XpAB6EQ2`
 > mUSDC mint (devnet): `EgkrEEpXKn61tdWDTJj9bDd68oW4ifiUC4M5uqiAhv9j`
 
+![Solana](https://img.shields.io/badge/Solana-devnet-14F195?logo=solana&logoColor=black)
+![Anchor](https://img.shields.io/badge/Anchor-0.32.1-blue)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs)
+![Tests](https://img.shields.io/badge/devnet%20tests-6%20passing-brightgreen)
+![License](https://img.shields.io/badge/network-devnet%20only-orange)
+
+**Verify everything on-chain:**
+[prediction_escrow](https://explorer.solana.com/address/DuB3yJQMPWCESJoEzShBWt1Jc3Q6j6DXLyi1XpAB6EQ2?cluster=devnet)
+· [mUSDC mint](https://explorer.solana.com/address/EgkrEEpXKn61tdWDTJj9bDd68oW4ifiUC4M5uqiAhv9j?cluster=devnet)
+· [TxLINE oracle](https://explorer.solana.com/address/6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J?cluster=devnet)
+
+### Why it stands out
+
+- 🔒 **Genuinely trustless settlement** — the on-chain program CPIs into TxLINE's `validate_stat_v2` and derives the winner from a cryptographic proof of the final score. No admin, keeper, or backend can move the result.
+- 💰 **Real SPL-token escrow** — stakes sit in a program-owned mUSDC escrow (our own devnet test token — never the restricted TxL), paid out pari-mutuel.
+- ⚡ **End-to-end live** — program + mUSDC + config deployed on devnet, real TxLINE World Cup data, wallet staking that moves real (devnet) value.
+- 🤖 **Automatic settlement** — a keeper watches the live scores SSE and settles at full-time, no human trigger.
+- 🧾 **Verifiable receipts** — every settled market shows the TxLINE score → Merkle proof → on-chain settlement tx, re-verifiable by anyone.
+- 🎛️ **Product-complete** — Dashboard, Fixtures, Markets, Positions, Receipts, live analytics/leaderboards, a real-time activity feed, wallet connect, claim.
+- ✅ **Test-backed & deploy-ready** — 6 passing devnet integration tests + a one-command Docker deploy.
+
 ---
 
 ## The problem
@@ -70,6 +91,18 @@ all untrusted — none of them can move the result.
 
 ---
 
+## Screenshots
+
+_Drop your captures into `docs/screenshots/` with these names and they render below._
+
+| Dashboard (live keeper status, analytics, activity feed) | Fixture → create market + implied-probability odds |
+| :--: | :--: |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Fixture](docs/screenshots/fixture.png) |
+| **Stake mUSDC via wallet (Phantom, devnet)** | **Verifiable receipt: TxLINE score → Merkle proof → on-chain tx** |
+| ![Stake](docs/screenshots/stake.png) | ![Receipt](docs/screenshots/receipt.png) |
+
+---
+
 ## Monorepo layout
 
 ```
@@ -96,6 +129,11 @@ matchcall/
 ---
 
 ## Setup
+
+> **One-command path:** with a funded deployer keypair (`.keys/deployer.json`),
+> `./bootstrap.sh` runs deploy → mint mUSDC → init config → TxLINE activate in one
+> go, then `cd app && npm run dev` + `cd keeper && npm start`. The manual steps
+> below explain each stage.
 
 ### Prerequisites
 
@@ -124,8 +162,11 @@ solana config set --url https://api.devnet.solana.com
 solana airdrop 2 --keypair .keys/deployer.json
 ./scripts/airdrop-loop.sh          # optional: keep retrying to reach ~5 SOL
 
-anchor build                        # writes target/idl/prediction_escrow.json
-anchor deploy                       # deploys to DuB3yJQMPWCESJoEzShBWt1Jc3Q6j6DXLyi1XpAB6EQ2
+# Anchor 0.32.1's bundled `anchor build` pins an older platform-tools that can't
+# parse a newer edition2024 dependency; build the .so + IDL with a newer toolchain:
+./scripts/build-program.sh          # cargo-build-sbf (platform-tools v1.52) + IDL
+solana program deploy target/deploy/prediction_escrow.so \
+  --program-id target/deploy/prediction_escrow-keypair.json
 ```
 
 The program ID is pinned in `Anchor.toml` and `declare_id!` — a fresh deploy
@@ -217,8 +258,27 @@ program to verify the final score.
 ## How trustless settlement works
 
 At full-time the keeper fetches the TxLINE Merkle proof for the two full-game
-goal totals (`statKeys=1,2`) and submits `settle_market(payload)`. Inside the
-program:
+goal totals (`statKeys=1,2`) and submits `settle_market(payload)`.
+
+```mermaid
+sequenceDiagram
+    participant K as Keeper
+    participant TX as TxLINE API
+    participant P as prediction_escrow
+    participant V as TxLINE validate_stat_v2
+    Note over K: fixture hits game_finalised (scores SSE)
+    K->>TX: GET /scores/stat-validation (statKeys=1,2)
+    TX-->>K: Merkle proof (root, statProofs, subTree, mainTree)
+    K->>P: settle_market(payload)
+    P->>P: re-derive daily_scores_roots PDA from proof.ts
+    P->>V: CPI validate_stat_v2(payload, exact-score strategy)
+    V-->>P: return_data: bool
+    Note over P: revert unless bool == true
+    P->>P: derive winning outcome from the proven score
+    P-->>K: Settled (permissionless — keeper only pays the fee)
+```
+
+Inside the program:
 
 1. **The roots account is pinned to the proof, not the caller.** From the proof's
    own timestamp (`updateStats.minTimestamp`), the program derives the TxLINE
@@ -241,6 +301,47 @@ transaction*, settlement is permissionless: the keeper is only a fee-payer. See
 [docs/TECHNICAL.md](docs/TECHNICAL.md) for the discriminator, payload layout, and
 the reasoning behind CPI-ing into `validate_stat_v2` instead of re-verifying the
 Merkle proof ourselves.
+
+---
+
+## Tests
+
+Client integration tests run against the **deployed devnet program** (no rebuild
+or redeploy needed):
+
+```bash
+cd tests && npm install && npm test
+```
+
+```
+prediction_escrow (devnet, deployed program)
+  ✔ config PDA is initialized and decodes (admin, stake_mint == mUSDC)
+  ✔ create_market: creates a MATCH_WINNER market that decodes correctly
+  ✔ place_prediction: stakes on an outcome; Position decodes and escrow balance increases
+  ✔ negative: settle_market before lock reverts with MarketStillOpen
+  ✔ negative: place_prediction after lock reverts with MarketLocked
+  ✔ negative: settle_market with the wrong TxLINE program reverts with InvalidTxlineProgram
+  6 passing (20s)
+```
+
+The full `settle_market` happy path needs a live TxLINE `game_finalised` Merkle
+proof (only available after a match ends) and is exercised by the keeper/live demo.
+
+---
+
+## Deploying
+
+`better-sqlite3` is a native module with a local DB file and the keeper is a
+persistent process, so deploy to a **container host** (Railway / Render / Fly / any
+VPS), not a serverless platform:
+
+```bash
+cp app/.env.example .env    # fill MARKET_AUTHORITY_SECRET, TXLINE_AUTH_JWT, TXLINE_API_TOKEN
+docker compose up --build   # app on :3000 + keeper, with a /data volume for the DB
+```
+
+Full instructions (Railway two-service setup, volume, and why not Vercel) in
+[docs/DEPLOY.md](docs/DEPLOY.md).
 
 ---
 

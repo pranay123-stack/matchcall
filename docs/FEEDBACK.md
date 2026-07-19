@@ -60,11 +60,43 @@ developer-experience polish rather than protocol issues.
    keep that warning prominent and, ideally, include the derived roots pubkey in
    the proof response so clients can cross-check.
 
-6. **The IDL is delivered as a markdown code block.** The devnet program IDL is
-   embedded inside `documentation/programs/devnet.md` and has to be scraped with a
-   ` ```json ` regex. That's brittle — a fenced-language change or surrounding
-   prose edit breaks the parser. *Suggestion:* serve the raw IDL at a stable JSON
-   URL (e.g. `/programs/devnet/idl.json`) alongside the markdown.
+6. **The IDL is no longer where the examples fetch it from.** The published devnet
+   example (and TxODDS's own sample) scrapes the program IDL out of a ` ```json `
+   block in `documentation/programs/devnet.md`. As of our integration that block is
+   **gone** — the page renders the values as tables/prose, so the regex returns
+   nothing and activation fails at `new Program(idl, …)`. We recovered by fetching
+   the IDL **on-chain** via `anchor.Program.fetchIdl(programId, provider)`, which is
+   actually the more robust source. *Suggestion:* either restore the JSON block,
+   serve the raw IDL at a stable URL (e.g. `/programs/devnet/idl.json`), or point
+   integrators at the on-chain IDL account in the first place.
+
+9. **No published Merkle-hashing spec, so off-chain verification is impossible.**
+   The proof structure (`statProof`/`subTreeProof`/`mainTreeProof`, sibling flags)
+   is documented, but the **leaf construction and hash function** that fold a proof
+   back to the anchored root are not — only the on-chain `validate_stat_v2` can
+   check a proof. That's fine for CPI settlement, but it blocks a dApp from showing
+   a client-side "recompute the root, ✓ it matches" verification without a
+   transaction. *Suggestion:* publish the hashing spec (hash fn, leaf encoding,
+   node-combine/ordering) or a tiny `verifyProof(proof, root)` helper library.
+
+10. **No sandbox / replay fixture with a finalised proof — you can't test settlement
+    until a real match ends.** The free tier only exposes *upcoming* fixtures; none
+    are finished, and `stat-validation` only returns a proof once a fixture reaches
+    `game_finalised`. So the entire settlement happy-path (the most important code
+    to test) is undevelopable/untestable until you happen to catch a live match at
+    full-time. This was the single biggest friction in building a *settlement*
+    integration. *Suggestion:* provide one stable "replay" fixture id that always
+    returns a canned `game_finalised` record + its real Merkle proof against a
+    persisted `daily_scores_roots` account, so integrators can exercise
+    `settle_market` end-to-end on demand.
+
+11. **Activation depends on the exact Token-2022 program id for ATA derivation.** The
+    TxL treasury/user ATAs must be derived with the canonical Token-2022 program
+    (`TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`); a subtly-wrong constant fails
+    late with a generic `incorrect program id for instruction` from the ATA program,
+    which is hard to trace. *Suggestion:* show the exact program id in the activation
+    snippet and/or import it from `@solana/spl-token` in the sample rather than
+    hardcoding a literal.
 
 7. **The `validate_stat_v2` return value is an undocumented bare bool.** We rely on
    `get_return_data()` yielding a Borsh `bool`. This works, but it's discovered by
