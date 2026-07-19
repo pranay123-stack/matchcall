@@ -77,6 +77,8 @@ async function main() {
       marketPda: created.marketPda,
       escrow: created.escrow,
       seedHex: created.seedHex,
+      homeTeam: fixture.homeTeam,
+      awayTeam: fixture.awayTeam,
     });
     console.log(`Created market ${id} -> ${created.marketPda} (sig ${created.signature})`);
   } else {

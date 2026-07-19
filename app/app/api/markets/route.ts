@@ -89,6 +89,8 @@ export async function POST(request: Request) {
       marketPda: onchain.marketPda,
       escrow: onchain.escrow,
       seedHex: onchain.seedHex,
+      homeTeam: fixture?.homeTeam ?? null,
+      awayTeam: fixture?.awayTeam ?? null,
     });
 
     return json({ market: await toMarketDTO(row) }, 201);

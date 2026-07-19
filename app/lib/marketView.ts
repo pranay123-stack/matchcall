@@ -12,6 +12,8 @@ import {
 export type MarketDTO = {
   id: string;
   fixtureId: string;
+  homeTeam: string | null;
+  awayTeam: string | null;
   marketType: "MATCH_WINNER" | "TOTALS" | "BTTS";
   lineParam: number | null;
   outcomes: { index: number; label: string; pool: number }[];
@@ -62,6 +64,8 @@ export async function toMarketDTO(row: MarketRow): Promise<MarketDTO> {
   return {
     id: row.id,
     fixtureId: row.fixtureId,
+    homeTeam: row.homeTeam ?? null,
+    awayTeam: row.awayTeam ?? null,
     marketType,
     lineParam: row.lineParam,
     outcomes,

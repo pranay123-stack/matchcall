@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS markets (
   escrow           TEXT NOT NULL,
   seedHex          TEXT NOT NULL,
   status           TEXT NOT NULL DEFAULT 'OPEN',
+  homeTeam         TEXT,
+  awayTeam         TEXT,
   winningOutcome   INTEGER,
   finalHomeGoals   INTEGER,
   finalAwayGoals   INTEGER,
@@ -55,6 +57,14 @@ CREATE TABLE IF NOT EXISTS positions (
 
 CREATE INDEX IF NOT EXISTS idx_positions_market ON positions (marketId);
 `);
+  // Lightweight migration for DBs created before homeTeam/awayTeam existed.
+  for (const col of ["homeTeam", "awayTeam"]) {
+    try {
+      db.exec(`ALTER TABLE markets ADD COLUMN ${col} TEXT`);
+    } catch {
+      /* column already exists */
+    }
+  }
   _db = db;
   return db;
 }
@@ -86,6 +96,8 @@ export type MarketRow = {
   escrow: string;
   seedHex: string;
   status: string;
+  homeTeam: string | null;
+  awayTeam: string | null;
   winningOutcome: number | null;
   finalHomeGoals: number | null;
   finalAwayGoals: number | null;
@@ -107,10 +119,10 @@ export type PositionRow = {
 const INSERT_MARKET = `
   INSERT INTO markets (
     id, fixtureId, marketType, lineParam, lockAt, participant1IsHome,
-    marketPda, escrow, seedHex, status, createdAt
+    marketPda, escrow, seedHex, status, homeTeam, awayTeam, createdAt
   ) VALUES (
     @id, @fixtureId, @marketType, @lineParam, @lockAt, @participant1IsHome,
-    @marketPda, @escrow, @seedHex, 'OPEN', @createdAt
+    @marketPda, @escrow, @seedHex, 'OPEN', @homeTeam, @awayTeam, @createdAt
   )`;
 
 export function insertMarket(input: {
@@ -123,11 +135,15 @@ export function insertMarket(input: {
   marketPda: string;
   escrow: string;
   seedHex: string;
+  homeTeam?: string | null;
+  awayTeam?: string | null;
 }): MarketRow {
   prep(INSERT_MARKET).run({
     ...input,
     participant1IsHome: input.participant1IsHome ? 1 : 0,
     lineParam: input.lineParam ?? null,
+    homeTeam: input.homeTeam ?? null,
+    awayTeam: input.awayTeam ?? null,
     createdAt: Math.floor(Date.now() / 1000),
   });
   return getMarket(input.id)!;

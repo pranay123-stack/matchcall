@@ -23,6 +23,8 @@ export type Outcome = { index: number; label: string; pool: number };
 export type Market = {
   id: string;
   fixtureId: string;
+  homeTeam?: string | null;
+  awayTeam?: string | null;
   marketType: MarketType;
   lineParam: number | null;
   outcomes: Outcome[];
@@ -201,6 +203,12 @@ export function marketTitle(m: Market): string {
     return `Total Goals O/U ${(m.lineParam / 2).toFixed(1)}`;
   }
   return marketTypeLabel(m.marketType);
+}
+
+/** "Spain vs Argentina" when known, else a short fixture reference. */
+export function matchLabel(m: Market): string {
+  if (m.homeTeam && m.awayTeam) return `${m.homeTeam} vs ${m.awayTeam}`;
+  return `Fixture ${m.fixtureId}`;
 }
 
 /** decimal odds -> normalized implied probabilities (sum to 1). */

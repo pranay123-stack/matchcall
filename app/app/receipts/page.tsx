@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, fmtMusdc, marketTitle, type Market } from "@/app/_lib/api";
+import { api, fmtMusdc, marketTitle, matchLabel, type Market } from "@/app/_lib/api";
 import { Card, SectionTitle, StatePanel, StatusPill } from "@/components/ui";
 
 export default function ReceiptsPage() {
@@ -89,10 +89,13 @@ function ReceiptCard({ market, ready }: { market: Market; ready?: boolean }) {
   return (
     <Link href={`/receipts/${market.id}`} className="block">
       <div className="glass glass-hover h-full p-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-white">{marketTitle(market)}</span>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-neon/80">
+            {matchLabel(market)}
+          </span>
           <StatusPill status={market.status} />
         </div>
+        <div className="mb-2 text-sm font-semibold text-white">{marketTitle(market)}</div>
         {ready ? (
           <div className="text-sm">
             <span className="text-white/50">Final score </span>
