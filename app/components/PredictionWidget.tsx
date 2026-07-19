@@ -77,8 +77,11 @@ export function PredictionWidget({
     setFaucetBusy(true);
     setMsg(null);
     try {
-      await api.faucet(publicKey.toBase58());
-      setMsg("Test mUSDC sent to your wallet. It may take a few seconds to arrive.");
+      const res = await api.faucet(publicKey.toBase58());
+      const gas = res && typeof res === "object" && "solSent" in res && (res as { solSent?: number }).solSent
+        ? " + a little devnet SOL for gas"
+        : "";
+      setMsg(`Sent 1000 test mUSDC${gas}. Ready to stake in a few seconds.`);
     } catch (e) {
       setMsg(errText(e));
     } finally {

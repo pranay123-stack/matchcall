@@ -5,7 +5,14 @@
 // so testers can place predictions.
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   createMint,
@@ -108,4 +115,39 @@ export async function airdropMusdc(
   );
 
   return { signature, ata: ata.address.toBase58(), amount: amountHuman };
+}
+
+const LAMPORTS_PER_SOL = 1_000_000_000;
+
+/**
+ * Gas drip: top a fresh tester up to a little devnet SOL so they can actually
+ * submit a stake (mUSDC is the bet; SOL pays the fee + position-account rent).
+ * Only sends if the wallet is below `minSol`, and never if the authority itself
+ * is running low — so repeat clicks and a near-empty faucet can't drain it.
+ */
+export async function dripSol(
+  wallet: string,
+  opts?: { minSol?: number; topUpSol?: number }
+): Promise<{ sent: number; signature?: string; reason?: string }> {
+  const minSol = opts?.minSol ?? 0.02;
+  const topUpSol = opts?.topUpSol ?? 0.05;
+  const connection = rpc();
+  const payer = deployerKeypair();
+  const owner = new PublicKey(wallet);
+
+  const balance = await connection.getBalance(owner, "confirmed");
+  if (balance >= minSol * LAMPORTS_PER_SOL) return { sent: 0, reason: "already funded" };
+
+  const lamports = Math.round(topUpSol * LAMPORTS_PER_SOL);
+  const authBalance = await connection.getBalance(payer.publicKey, "confirmed");
+  // Keep a buffer so the authority can still pay its own fees.
+  if (authBalance < lamports + 20_000_000) return { sent: 0, reason: "faucet low on SOL" };
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({ fromPubkey: payer.publicKey, toPubkey: owner, lamports })
+  );
+  const signature = await sendAndConfirmTransaction(connection, tx, [payer], {
+    commitment: "confirmed",
+  });
+  return { sent: topUpSol, signature };
 }

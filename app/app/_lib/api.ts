@@ -209,7 +209,7 @@ export const api = {
   keeperStatus: () => jsonFetch<KeeperStatus>("/api/keeper/status"),
   getStats: () => jsonFetch<Stats>("/api/stats"),
   faucet: (wallet: string) =>
-    jsonFetch<{ ok?: boolean; signature?: string }>("/api/faucet", {
+    jsonFetch<{ ok?: boolean; signature?: string; amount?: number; solSent?: number }>("/api/faucet", {
       method: "POST",
       body: JSON.stringify({ wallet }),
     }),
