@@ -2,7 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   // better-sqlite3 is a native module; keep it external to the server bundle.
-  serverExternalPackages: ["better-sqlite3"],
+  // (Next 14 key; renamed to serverExternalPackages in Next 15.)
+  experimental: {
+    serverComponentsExternalPackages: ["better-sqlite3"],
+  },
   webpack: (config) => {
     config.externals = config.externals || [];
     // Our server modules use explicit ".js" specifiers on relative imports
