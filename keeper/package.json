@@ -1,0 +1,23 @@
+{
+  "name": "matchcall-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MatchCall settlement keeper — watches TxLINE live scores and triggers trustless on-chain settlement of open prediction markets.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "0.32.1",
+    "@solana/web3.js": "^1.95.4",
+    "dotenv": "^16.4.5",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
