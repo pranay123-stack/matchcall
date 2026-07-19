@@ -25,7 +25,9 @@ export function Nav() {
 
         <nav className="ml-2 hidden items-center gap-1 text-sm sm:flex">
           <NavLink href="/">Dashboard</NavLink>
+          <NavLink href="/fixtures">Fixtures</NavLink>
           <NavLink href="/markets">Markets</NavLink>
+          <NavLink href="/receipts">Receipts</NavLink>
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
