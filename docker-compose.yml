@@ -1,0 +1,52 @@
+# MatchCall — run the web app and the settlement keeper together.
+#
+#   cp app/.env.example .env      # then fill in the REQUIRED secrets
+#   docker compose up --build
+#
+# The app serves on http://localhost:3000. The keeper talks to it over the
+# internal network at http://app:3000. The SQLite DB lives on the named volume
+# `matchcall-data` mounted at /data, so it survives `docker compose down` and
+# restarts (only `down -v` deletes it).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    image: matchcall-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # SQLite on the persistent volume (overrides any DATABASE_PATH in .env).
+      DATABASE_PATH: /data/matchcall.db
+    volumes:
+      - matchcall-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  keeper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: keeper
+    image: matchcall-keeper
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Reach the app over the compose network, not localhost.
+      KEEPER_API_BASE: http://app:3000
+    depends_on:
+      app:
+        condition: service_started
+
+volumes:
+  matchcall-data:

@@ -1,0 +1,38 @@
+# Keep the build context small and secrets OUT of images.
+
+# Dependencies / build output (reinstalled/rebuilt inside the image)
+**/node_modules
+app/.next
+app/out
+**/dist
+**/*.tsbuildinfo
+
+# Rust / Anchor build artifacts (not needed for the app or keeper images)
+target/deploy
+target/debug
+target/release
+target/sbf-solana-solana
+.anchor
+test-ledger
+
+# Secrets & local env — NEVER bake these into an image (pass via runtime env)
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.*.local
+.keys/*.json
+
+# Local SQLite data (lives on the mounted volume, not the image)
+*.db
+*.db-journal
+*.sqlite
+
+# Tests (not part of the runtime images)
+tests
+
+# VCS / editor / OS noise
+.git
+.gitignore
+**/*.log
+.DS_Store
