@@ -35,18 +35,38 @@ pari-mutuel payout. No trusted admin ever picks the winner.
 
 ---
 
-## Demo
+## Try it — run it and see the results
 
-- 🌐 **Live app:** **https://matchcall-production.up.railway.app** — open it, connect
-  Phantom (set to **Devnet**), click **"Get test mUSDC"** (gives you mUSDC *and* gas),
-  and stake. Fully self-serve; nothing to install.
-- 🎥 **Video (≤5 min):** _[[ add link ]]_ — script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+### Option A · Use the live app (no setup)
 
-**What the demo shows:**
-1. Live fixtures + real-time analytics, leaderboards, and an activity feed.
-2. Connect wallet → one-click **mUSDC + gas** → stake into the on-chain escrow (appears in the live feed instantly).
-3. Your **Positions** and a market's **verifiable receipt** (score → Merkle proof → on-chain tx).
-4. **Trustless settlement** — the `validate_stat_v2` CPI explained on the *How it works* page, and backed by the 14 passing tests. At full-time the keeper settles automatically.
+Open **https://matchcall-production.up.railway.app**, then:
+
+1. **Connect Phantom**, set to **Devnet** (Phantom → Settings → Developer Settings → Testnet Mode → *Solana Devnet*).
+2. Click **"Get test mUSDC"** — you receive mUSDC **and** a little SOL for gas, so a fresh wallet can stake with zero setup.
+3. Open a market → pick an outcome → enter an amount → **Stake** → approve in Phantom.
+
+### Option B · Run it locally
+
+Follow [Setup](#setup) (build/deploy the program, mint mUSDC, activate TxLINE), then:
+
+```bash
+cd app && npm run dev            # http://localhost:3000
+cd keeper && npm start           # (separate terminal) automatic settlement
+```
+
+Run the tests: `cd tests && npm test` (on-chain) and `cd app && npm run test:settlement` (logic).
+
+### How you see the results
+
+| Where | What you see |
+| --- | --- |
+| **Dashboard** | Total volume, top-predictor + biggest-market leaderboards, and a **live activity feed** — your stake shows up the instant it lands on-chain. |
+| **Positions** tab | Every bet you placed, with your pool share and estimated pari-mutuel payout. |
+| **Receipts** tab | A market's proof page: final score → Merkle proof → on-chain settlement tx, each re-verifiable. |
+| **Verify on-chain** (footer) | Explorer links to the program, mUSDC mint, and escrow accounts — see your staked funds sitting in the program escrow. |
+| **At full-time** | The keeper settles automatically; the market flips to **SETTLED** and winners click **Claim** to pull their payout. |
+
+> 🎥 Demo video (≤5 min): _[[ add link ]]_ — recording script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
 
 ---
 
