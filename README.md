@@ -51,6 +51,39 @@ all untrusted — none of them can move the result.
 
 ---
 
+## In plain English — a worked example
+
+Take **Spain vs Argentina**.
+
+1. **Create a market.** Someone opens a *Match Winner* market on that fixture. This
+   creates an on-chain account (a PDA) with three outcomes — Home / Draw / Away —
+   and a program-owned SPL escrow to hold the stakes.
+2. **People stake.** Alice connects her wallet, clicks *Get test mUSDC* (which gives
+   her mUSDC **plus** a little SOL for gas), and stakes **100 mUSDC on Spain (Home)**.
+   Bob stakes **50 mUSDC on Argentina (Away)**. Their 150 mUSDC now sits in the
+   program escrow — no admin holds the money. The live pools + activity feed update
+   instantly.
+3. **The match plays.** Live scores stream from TxLINE; betting locks at kickoff.
+4. **Full-time → settlement.** It ends **Spain 2–1 Argentina**. A keeper bot spots the
+   final whistle, fetches TxLINE's Merkle proof of the score, and calls
+   `settle_market` — which **CPIs into TxLINE's on-chain `validate_stat_v2`**. That
+   verifies the proof against the root TxLINE anchored on Solana; if the proof were
+   fake, the transaction reverts. The program reads *Spain 2, Argentina 1* **from the
+   proven data** and derives the winner: **Home**. Nobody supplied the outcome — it
+   came from the proof.
+5. **Payout.** Alice backed the winner, so she claims her pari-mutuel share of the
+   whole 150 mUSDC pool. Bob loses his stake. (If nobody had backed the proven
+   outcome, everyone would get an automatic refund instead.)
+6. **Receipt.** Anyone can open the market's receipt: the final score, the Merkle
+   proof, and a link to the settlement transaction on Solana Explorer — fully
+   re-verifiable.
+
+> **In one line:** bet on real matches with real on-chain money, and the winner is
+> settled by a cryptographic proof verified on the blockchain — so the result is
+> provably the real score, not whatever an operator claims.
+
+---
+
 ## Architecture
 
 ```
