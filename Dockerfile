@@ -75,9 +75,11 @@ COPY --from=app-builder /app ./
 # `tsx ../scripts/...` from /app, so it must sit at /scripts in the image.
 COPY scripts/ /scripts/
 
-# SQLite lives on a mounted volume so data persists across restarts/redeploys.
+# DB dir. We deliberately DON'T declare `VOLUME` — Railway rejects that
+# instruction at parse time, and the DB is disposable anyway (reindex rebuilds
+# it from on-chain state on boot). Attach a persistent volume at /data via the
+# host's own UI if you want it to survive restarts; it's optional.
 RUN mkdir -p /data
-VOLUME ["/data"]
 
 EXPOSE 3000
 # Rebuild the DB index from on-chain truth on boot (idempotent; non-fatal if the
