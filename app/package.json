@@ -13,7 +13,8 @@
     "mint:musdc": "tsx ../scripts/mint-musdc.ts",
     "market:init": "tsx ../scripts/init-config.ts",
     "demo:seed": "tsx ../scripts/demo-seed.ts",
-    "reindex": "tsx ../scripts/reindex-from-chain.ts"
+    "reindex": "tsx ../scripts/reindex-from-chain.ts",
+    "test:settlement": "tsx ../scripts/test-settlement.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.32.1",
