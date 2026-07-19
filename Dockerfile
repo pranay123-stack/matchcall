@@ -1,9 +1,9 @@
 # MatchCall — container images for the Next.js app and the settlement keeper.
 #
 # Build context is the REPO ROOT (docker build -f Dockerfile .).
-# Two independent final stages:
-#   --target app     -> the Next.js web app (default), `next start` on :3000
-#   --target keeper  -> the persistent settlement keeper process
+# The web app is the LAST (default) stage, so platforms like Railway that build
+# the final stage automatically deploy the app. Build the keeper explicitly with
+#   docker build --target keeper .
 #
 # The app uses better-sqlite3, a NATIVE module compiled against a specific libc,
 # so every stage shares node:20-bookworm-slim: the prebuilt .node binary from the
@@ -36,13 +36,33 @@ ENV NEXT_PUBLIC_RPC_URL=$NEXT_PUBLIC_RPC_URL \
     NEXT_PUBLIC_PROGRAM_ID=$NEXT_PUBLIC_PROGRAM_ID \
     NEXT_PUBLIC_MUSDC_MINT=$NEXT_PUBLIC_MUSDC_MINT
 
-# App source + the root-level assets the server reads at runtime (IDL, keys).
 COPY app/ ./
 RUN npm run build
 
 # ---------------------------------------------------------------------------
-# 2) App runtime stage — carry the built app + node_modules (incl. the compiled
-#    native better-sqlite3) and serve with `next start`.
+# 2) Keeper stage — the standalone settlement process (tsx runtime, no build).
+#    Build explicitly with `--target keeper`. It talks to the app over HTTP via
+#    KEEPER_API_BASE.
+# ---------------------------------------------------------------------------
+FROM node:20-bookworm-slim AS keeper
+WORKDIR /keeper
+ENV NODE_ENV=production
+
+COPY keeper/package.json keeper/package-lock.json ./
+RUN npm ci
+
+# Keeper source + the committed IDL it reads for the direct-settle fallback.
+# The keeper resolves its IDL at <repoRoot>/target/idl/prediction_escrow.json
+# (repoRoot is "/" here). target/ is gitignored, so we place the COMMITTED
+# idl/ there to keep a clean checkout self-contained.
+COPY keeper/ ./
+COPY idl/ /target/idl/
+
+CMD ["npm", "run", "start"]
+
+# ---------------------------------------------------------------------------
+# 3) App runtime stage (LAST = default target) — carry the built app +
+#    node_modules (incl. the compiled native better-sqlite3) and serve.
 # ---------------------------------------------------------------------------
 FROM node:20-bookworm-slim AS app
 WORKDIR /app
@@ -64,23 +84,3 @@ EXPOSE 3000
 # RPC is briefly unreachable), then serve. This makes a fresh/ephemeral DB show
 # every real market with live pools.
 CMD ["sh", "-c", "npm run reindex || true; npm run start"]
-
-# ---------------------------------------------------------------------------
-# 3) Keeper stage — the standalone settlement process (tsx runtime, no build).
-#    It talks to the app over HTTP via KEEPER_API_BASE.
-# ---------------------------------------------------------------------------
-FROM node:20-bookworm-slim AS keeper
-WORKDIR /keeper
-ENV NODE_ENV=production
-
-COPY keeper/package.json keeper/package-lock.json ./
-RUN npm ci
-
-# Keeper source + the committed IDL it reads for the direct-settle fallback.
-# The keeper resolves its IDL at <repoRoot>/target/idl/prediction_escrow.json
-# (repoRoot is "/" here). target/ is gitignored, so we place the COMMITTED
-# idl/ there to keep a clean checkout self-contained.
-COPY keeper/ ./
-COPY idl/ /target/idl/
-
-CMD ["npm", "run", "start"]
