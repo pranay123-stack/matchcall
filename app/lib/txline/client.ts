@@ -100,7 +100,7 @@ export class TxlineClient {
     const data = await txlineFetch<unknown>(`/fixtures/snapshot${query ? `?${query}` : ""}`);
     if (!Array.isArray(data)) return [];
     const now = Date.now();
-    return data
+    const sorted = data
       .map(normalizeFixture)
       .filter((f): f is Fixture => f !== null)
       // Free tier covers World Cup + International Friendlies — show both so
@@ -123,6 +123,15 @@ export class TxlineClient {
         const kb = b.kickoffAt ? Date.parse(b.kickoffAt) : Number.MAX_SAFE_INTEGER;
         return ka - kb;
       });
+
+    // The feed can list the same match under two fixture ids; keep one per pair.
+    const seen = new Set<string>();
+    return sorted.filter((f) => {
+      const key = `${f.competition}|${f.homeTeam}|${f.awayTeam}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   /** Latest normalized score event for a fixture from /scores/snapshot/{id}. */
