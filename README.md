@@ -161,13 +161,15 @@ Take **Spain vs Argentina**.
 
 ## Screenshots
 
-_Drop your captures into `docs/screenshots/` with these names and they render below._
+_Live from https://matchcall-production.up.railway.app_
 
-| Dashboard (live keeper status, analytics, activity feed) | Fixture → create market + implied-probability odds |
+**Dashboard** — live analytics, top-predictor & biggest-market leaderboards, keeper status, and a real-time activity feed:
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+| Fixture — markets on a match + create-market | Market — stake into escrow + live pools + positions |
 | :--: | :--: |
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Fixture](docs/screenshots/fixture.png) |
-| **Stake mUSDC via wallet (Phantom, devnet)** | **Verifiable receipt: TxLINE score → Merkle proof → on-chain tx** |
-| ![Stake](docs/screenshots/stake.png) | ![Receipt](docs/screenshots/receipt.png) |
+| ![Fixture](docs/screenshots/fixture.png) | ![Market](docs/screenshots/market.png) |
 
 ---
 
