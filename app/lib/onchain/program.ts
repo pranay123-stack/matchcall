@@ -726,6 +726,123 @@ export async function fetchMarketOnchain(marketPdaStr: string): Promise<OnchainM
   };
 }
 
+// Minimal base58 decoder (instruction data in a fetched tx arrives base58).
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Decode(input: string): Buffer {
+  const bytes = [0];
+  for (const ch of input) {
+    const value = BASE58_ALPHABET.indexOf(ch);
+    if (value < 0) throw new Error(`invalid base58 char '${ch}'`);
+    let carry = value;
+    for (let j = 0; j < bytes.length; j++) {
+      carry += bytes[j] * 58;
+      bytes[j] = carry & 0xff;
+      carry >>= 8;
+    }
+    while (carry > 0) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+  for (let k = 0; k < input.length && input[k] === "1"; k++) bytes.push(0);
+  return Buffer.from(bytes.reverse());
+}
+
+/**
+ * Decode a settle_market instruction's proof payload back into the raw TxLINE
+ * validation-JSON shape (`parseTxlineScoreProof` re-accepts it). Mirrors
+ * `encodeTxlineProofPayload` byte-for-byte. Input is the instruction data with
+ * the 8-byte discriminator already stripped.
+ */
+export function decodeSettleProofJson(data: Buffer): Record<string, unknown> {
+  let o = 0;
+  const i64 = () => { const v = data.readBigInt64LE(o); o += 8; return v; };
+  const i32r = () => { const v = data.readInt32LE(o); o += 4; return v; };
+  const u32r = () => { const v = data.readUInt32LE(o); o += 4; return v; };
+  const hash32 = () => { const b = data.subarray(o, o + 32); o += 32; return `0x${Buffer.from(b).toString("hex")}`; };
+  const nodes = () => {
+    const n = u32r();
+    const out: { hash: string; isRightSibling: boolean }[] = [];
+    for (let i = 0; i < n; i++) {
+      const hash = hash32();
+      const isRightSibling = data.readUInt8(o) === 1; o += 1;
+      out.push({ hash, isRightSibling });
+    }
+    return out;
+  };
+
+  i64(); // ts (== minTimestamp; re-derived below)
+  const fixtureId = i64();
+  const updateCount = i32r();
+  const minTimestamp = i64();
+  const maxTimestamp = i64();
+  const eventStatsSubTreeRoot = hash32();
+  const subTreeProof = nodes();
+  const mainTreeProof = nodes();
+  const eventStatRoot = hash32();
+  const statsLen = u32r();
+  const statsToProve: { key: number; value: number; period: number }[] = [];
+  const statProofs: { hash: string; isRightSibling: boolean }[][] = [];
+  for (let i = 0; i < statsLen; i++) {
+    statsToProve.push({ key: u32r(), value: i32r(), period: i32r() });
+    statProofs.push(nodes());
+  }
+
+  return {
+    summary: {
+      fixtureId: fixtureId.toString(),
+      updateStats: {
+        updateCount,
+        minTimestamp: minTimestamp.toString(),
+        maxTimestamp: maxTimestamp.toString(),
+      },
+      eventStatsSubTreeRoot,
+    },
+    statsToProve,
+    statProofs,
+    subTreeProof,
+    mainTreeProof,
+    eventStatRoot,
+  };
+}
+
+/**
+ * Recover both the settle signature and the full proof for a settled market
+ * straight from chain — the settle_market instruction carries the entire proof,
+ * so a receipt is reconstructable forever, with no dependency on TxLINE's
+ * (aging) score history or this app's ephemeral DB.
+ */
+export async function fetchSettleProofOnchain(
+  marketPdaStr: string
+): Promise<{ signature: string; proofJson: string } | null> {
+  const connection = rpc();
+  const market = new PublicKey(marketPdaStr);
+  const settleDisc = discriminator("global", "settle_market");
+  const sigs = await connection.getSignaturesForAddress(market, { limit: 50 }, "confirmed");
+  for (const s of sigs) {
+    if (s.err) continue;
+    const tx = await connection.getTransaction(s.signature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+    if (!tx) continue;
+    const msg = tx.transaction.message as unknown as {
+      instructions?: { programIdIndex: number; data: string }[];
+      accountKeys?: PublicKey[];
+    };
+    const instructions = msg.instructions ?? [];
+    const accountKeys = msg.accountKeys ?? [];
+    for (const ix of instructions) {
+      const programId = accountKeys[ix.programIdIndex];
+      if (!programId || !programId.equals(PROGRAM_ID)) continue;
+      const buf = base58Decode(ix.data);
+      if (buf.length < 8 || !buf.subarray(0, 8).equals(settleDisc)) continue;
+      return { signature: s.signature, proofJson: JSON.stringify(decodeSettleProofJson(buf.subarray(8))) };
+    }
+  }
+  return null;
+}
+
 export type ScannedMarket = {
   marketPda: string;
   seedHex: string;

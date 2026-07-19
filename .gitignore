@@ -31,3 +31,7 @@ app/.env.local
 
 # Keep the program + mint keypairs OUT of git (addresses are committed in docs)
 target/deploy/*.json
+
+# SQLite sidecar files
+*.db-shm
+*.db-wal

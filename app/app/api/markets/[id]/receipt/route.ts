@@ -2,6 +2,7 @@ import { json, fail } from "@/lib/http";
 import { getMarket } from "@/lib/db";
 import { marketTypeName, outcomeLabels } from "@/lib/onchain/program";
 import { parseTxlineScoreProof } from "@/lib/txline/proof";
+import { ensureReceipt } from "@/lib/settle";
 import type { TxlineProofNode } from "@/lib/onchain/program";
 
 export const runtime = "nodejs";
@@ -13,8 +14,15 @@ function nodesToHex(nodes: TxlineProofNode[]) {
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const row = getMarket(decodeURIComponent(params.id));
-    if (!row) return json({ error: "Market not found" }, 404);
+    const found = getMarket(decodeURIComponent(params.id));
+    if (!found) return json({ error: "Market not found" }, 404);
+    // Self-heal: if this market is settled on-chain but the local index has no
+    // proof/signature (e.g. after a redeploy wiped the ephemeral DB), rebuild
+    // the receipt from chain + TxLINE. Best-effort — falls through to null.
+    const row =
+      found.status === "SETTLED" && found.proofJson && found.settleSignature
+        ? found
+        : (await ensureReceipt(found).catch(() => null)) ?? found;
     if (row.status !== "SETTLED" || !row.proofJson || !row.settleSignature) {
       // No settlement yet — SPEC allows returning null.
       return json(null);
