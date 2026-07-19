@@ -16,6 +16,7 @@ import {
 } from "@/app/_lib/api";
 import { PredictionWidget } from "@/components/PredictionWidget";
 import { ClaimButton } from "@/components/ClaimButton";
+import { YourPosition } from "@/components/YourPosition";
 import { BackLink, Card, SectionTitle, StatePanel, StatusPill } from "@/components/ui";
 
 export default function MarketDetailPage({ params }: { params: { id: string } }) {
@@ -137,6 +138,9 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
           ) : null}
         </div>
       </Card>
+
+      {/* connected wallet's stake(s) on this market */}
+      <YourPosition market={market} positions={myPositions} onDone={load} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* place prediction */}
