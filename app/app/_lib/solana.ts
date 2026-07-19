@@ -31,6 +31,13 @@ export async function signSendConfirm(
 ): Promise<string> {
   const tx = deserializeTx(transactionBase64);
   const latest = await connection.getLatestBlockhash("confirmed");
+  // The tx was built server-side; refresh its blockhash on the client so it
+  // can't expire between build and wallet approval (legacy tx only — versioned
+  // messages are immutable and the wallet handles them).
+  if (tx instanceof Transaction) {
+    tx.recentBlockhash = latest.blockhash;
+    tx.lastValidBlockHeight = latest.lastValidBlockHeight;
+  }
   const signature = await sendTransaction(tx, connection);
   await connection.confirmTransaction(
     { signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight },
