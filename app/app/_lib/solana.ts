@@ -26,22 +26,39 @@ export function deserializeTx(b64: string): Transaction | VersionedTransaction {
  */
 export async function signSendConfirm(
   connection: Connection,
-  sendTransaction: (tx: Transaction | VersionedTransaction, connection: Connection) => Promise<string>,
+  sendTransaction: (
+    tx: Transaction | VersionedTransaction,
+    connection: Connection,
+    options?: { skipPreflight?: boolean; maxRetries?: number },
+  ) => Promise<string>,
   transactionBase64: string,
 ): Promise<string> {
   const tx = deserializeTx(transactionBase64);
-  const latest = await connection.getLatestBlockhash("confirmed");
-  // The tx was built server-side; refresh its blockhash on the client so it
-  // can't expire between build and wallet approval (legacy tx only — versioned
-  // messages are immutable and the wallet handles them).
-  if (tx instanceof Transaction) {
-    tx.recentBlockhash = latest.blockhash;
-    tx.lastValidBlockHeight = latest.lastValidBlockHeight;
+  // Use the blockhash the server already put on the tx (it has propagated by
+  // now). Skip client-side preflight — some wallets simulate against an RPC
+  // node that is slightly behind and reject a valid tx as "Unexpected error";
+  // we do our own confirmation below.
+  let signature: string;
+  try {
+    signature = await sendTransaction(tx, connection, { skipPreflight: true, maxRetries: 3 });
+  } catch (err) {
+    throw new Error(walletErrorDetail(err));
   }
-  const signature = await sendTransaction(tx, connection);
+  const latest = await connection.getLatestBlockhash("confirmed");
   await connection.confirmTransaction(
     { signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight },
     "confirmed",
   );
   return signature;
+}
+
+/** Wallet adapters wrap the real cause as a generic "Unexpected error"; dig it out. */
+function walletErrorDetail(err: unknown): string {
+  const e = err as { message?: string; error?: { message?: string }; cause?: { message?: string }; logs?: string[] };
+  const inner = e?.error?.message || e?.cause?.message;
+  const logs = Array.isArray(e?.logs) ? ` | logs: ${e!.logs!.slice(-3).join(" ")}` : "";
+  // eslint-disable-next-line no-console
+  console.error("[MatchCall] wallet send failed:", err);
+  if (inner && inner !== e?.message) return `${e?.message ?? "Wallet error"}: ${inner}${logs}`;
+  return `${e?.message ?? "Wallet error"}${logs}`;
 }
