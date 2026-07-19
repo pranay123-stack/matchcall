@@ -306,8 +306,9 @@ Merkle proof ourselves.
 
 ## Tests
 
-Client integration tests run against the **deployed devnet program** (no rebuild
-or redeploy needed):
+**14 tests total** — 6 on-chain integration + 8 pure settlement-logic.
+
+### On-chain integration (against the deployed devnet program, no rebuild)
 
 ```bash
 cd tests && npm install && npm test
@@ -324,8 +325,31 @@ prediction_escrow (devnet, deployed program)
   6 passing (20s)
 ```
 
-The full `settle_market` happy path needs a live TxLINE `game_finalised` Merkle
-proof (only available after a match ends) and is exercised by the keeper/live demo.
+### Settlement-decision logic (pure, deterministic, no chain / no live match)
+
+```bash
+cd app && npm run test:settlement
+```
+
+```
+settlement logic (pure, no chain)
+  ✔ game_finalised (statusId 100, period 100) is detected as final
+  ✔ game_finalised WITHOUT the 100/100 marker is NOT final
+  ✔ a live in-play goal event is NOT final
+  ✔ parseTxlineScoreProof yields the 2 total-goal stats (key 1,2 / period 0)
+  ✔ a malformed proof (wrong stat keys) is rejected
+  ✔ MATCH_WINNER: home win / draw / away win
+  ✔ TOTALS O/U 2.5 (lineParam 5): over vs under
+  ✔ BTTS: yes when both scored, no otherwise
+  8 passing
+```
+
+Together these cover the whole settlement path — **when** to settle (full-time
+detection), **how** the proof maps to the on-chain payload, **what** outcome each
+market resolves to, and that the program **refuses to settle without a valid
+TxLINE proof** (the CPI guards). The only step not unit-testable is a *genuine*
+TxLINE `game_finalised` Merkle proof flipping a market to SETTLED — that needs a
+match to actually end, and is completed automatically by the keeper / live demo.
 
 ---
 
