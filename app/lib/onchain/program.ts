@@ -439,6 +439,36 @@ export async function buildPlacePredictionTx(input: {
   };
 }
 
+/**
+ * Build + sign + send place_prediction with a server-held keypair (defaults to
+ * the platform authority). Used by the demo-seed script to pre-populate a pool;
+ * real users sign in the browser via buildPlacePredictionTx. Returns the sig.
+ */
+export async function placePredictionSigned(input: {
+  marketPda?: string;
+  seedHex?: string;
+  outcome: number;
+  amount: number; // human mUSDC
+  signer?: Keypair;
+}): Promise<string> {
+  const signer = input.signer ?? authorityKeypair();
+  const { transactionBase64 } = await buildPlacePredictionTx({
+    marketPda: input.marketPda,
+    seedHex: input.seedHex,
+    wallet: signer.publicKey.toBase58(),
+    outcome: input.outcome,
+    amount: input.amount,
+  });
+  const tx = Transaction.from(Buffer.from(transactionBase64, "base64"));
+  tx.sign(signer);
+  const connection = rpc();
+  const signature = await connection.sendRawTransaction(tx.serialize(), {
+    preflightCommitment: "confirmed",
+  });
+  await connection.confirmTransaction(signature, "confirmed");
+  return signature;
+}
+
 /** Confirm the place_prediction signature landed and the Position matches. */
 export async function verifyPosition(input: {
   marketPda?: string;
