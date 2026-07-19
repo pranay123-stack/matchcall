@@ -711,6 +711,75 @@ export async function fetchMarketOnchain(marketPdaStr: string): Promise<OnchainM
   };
 }
 
+export type ScannedMarket = {
+  marketPda: string;
+  seedHex: string;
+  escrow: string;
+  txlineFixtureId: number;
+  participant1IsHome: boolean;
+  marketType: number;
+  lineParam: number;
+  lockAt: number; // unix seconds
+};
+export type ScannedPosition = {
+  marketPda: string;
+  wallet: string;
+  outcome: number;
+  amount: number; // base units
+  claimed: boolean;
+};
+
+/**
+ * Read every Market + Position account owned by the program. The chain is the
+ * source of truth, so this rebuilds the local DB index from scratch (used to
+ * reindex a fresh deploy). Reads are cheap on devnet.
+ */
+export async function scanChain(): Promise<{ markets: ScannedMarket[]; positions: ScannedPosition[] }> {
+  const connection = rpc();
+  const accounts = await connection.getProgramAccounts(PROGRAM_ID, { commitment: "confirmed" });
+  const marketDisc = discriminator("account", "Market");
+  const positionDisc = discriminator("account", "Position");
+  const markets: ScannedMarket[] = [];
+  const positions: ScannedPosition[] = [];
+
+  for (const { pubkey, account } of accounts) {
+    const d = account.data;
+    if (d.length < 8) continue;
+    const disc = d.subarray(0, 8);
+    if (disc.equals(marketDisc)) {
+      let o = 8 + 32 + 32 + 32; // skip disc, config, creator, stake_mint
+      const escrow = new PublicKey(d.subarray(o, o + 32)); o += 32;
+      const seed = d.subarray(o, o + 32); o += 32;
+      const txlineFixtureId = Number(d.readBigInt64LE(o)); o += 8;
+      const participant1IsHome = d.readUInt8(o) === 1; o += 1;
+      const marketType = d.readUInt8(o); o += 1;
+      const lineParam = d.readInt32LE(o); o += 4;
+      o += 1; // num_outcomes
+      const lockAt = Number(d.readBigInt64LE(o));
+      markets.push({
+        marketPda: pubkey.toBase58(),
+        seedHex: Buffer.from(seed).toString("hex"),
+        escrow: escrow.toBase58(),
+        txlineFixtureId,
+        participant1IsHome,
+        marketType,
+        lineParam,
+        lockAt,
+      });
+    } else if (disc.equals(positionDisc)) {
+      const p = decodePosition(d);
+      positions.push({
+        marketPda: p.market.toBase58(),
+        wallet: p.user.toBase58(),
+        outcome: p.outcome,
+        amount: Number(p.amount),
+        claimed: p.claimed,
+      });
+    }
+  }
+  return { markets, positions };
+}
+
 function decodePosition(d: Buffer): {
   market: PublicKey;
   user: PublicKey;
