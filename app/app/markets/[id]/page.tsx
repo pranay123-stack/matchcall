@@ -113,26 +113,29 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
           />
         </div>
 
-        {settled ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/5 pt-4">
-            {market.settleSignature ? (
-              <a
-                className="text-sm text-neon hover:underline"
-                href={explorerTx(market.settleSignature)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Settlement tx ↗
-              </a>
-            ) : null}
-            <Link
-              href={`/receipts/${market.id}`}
-              className="rounded-lg border border-gold/40 px-3 py-1.5 text-sm font-semibold text-gold transition hover:bg-gold/10"
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/5 pt-4">
+          {settled && market.settleSignature ? (
+            <a
+              className="text-sm text-neon hover:underline"
+              href={explorerTx(market.settleSignature)}
+              target="_blank"
+              rel="noreferrer"
             >
-              View verifiable receipt →
-            </Link>
-          </div>
-        ) : null}
+              Settlement tx ↗
+            </a>
+          ) : null}
+          <Link
+            href={`/receipts/${market.id}`}
+            className="rounded-lg border border-gold/40 px-3 py-1.5 text-sm font-semibold text-gold transition hover:bg-gold/10"
+          >
+            View verifiable receipt →
+          </Link>
+          {!settled ? (
+            <span className="text-xs text-white/40">
+              (proof fills in automatically when the match is settled)
+            </span>
+          ) : null}
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
