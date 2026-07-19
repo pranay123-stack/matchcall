@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, type Fixture, type Market } from "@/app/_lib/api";
-import { marketTitle } from "@/app/_lib/api";
 import { ScoreHeader } from "@/components/ScoreHeader";
 import { OddsPanel } from "@/components/OddsPanel";
 import { CreateMarketPanel } from "@/components/CreateMarketPanel";
-import { PredictionWidget } from "@/components/PredictionWidget";
-import { BackLink, Card, SectionTitle, StatePanel, StatusPill } from "@/components/ui";
+import { MarketsAccordion } from "@/components/MarketsAccordion";
+import { BackLink, Card, SectionTitle, StatePanel } from "@/components/ui";
 
 export default function FixtureDetailPage({ params }: { params: { id: string } }) {
   const fixtureId = params.id;
@@ -99,20 +98,7 @@ export default function FixtureDetailPage({ params }: { params: { id: string } }
               No markets yet — create the first one on the left. It goes live on-chain instantly.
             </Card>
           ) : (
-            markets.map((m) => (
-              <Card key={m.id}>
-                <div className="mb-3 flex items-center justify-between">
-                  <a
-                    href={`/markets/${m.id}`}
-                    className="text-sm font-semibold text-white hover:text-neon"
-                  >
-                    {marketTitle(m)}
-                  </a>
-                  <StatusPill status={m.status} />
-                </div>
-                <PredictionWidget market={m} onDone={loadMarkets} />
-              </Card>
-            ))
+            <MarketsAccordion markets={markets} onDone={loadMarkets} />
           )}
         </div>
       </div>
