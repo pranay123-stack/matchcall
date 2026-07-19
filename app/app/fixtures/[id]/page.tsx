@@ -5,7 +5,7 @@ import { api, type Fixture, type Market } from "@/app/_lib/api";
 import { ScoreHeader } from "@/components/ScoreHeader";
 import { OddsPanel } from "@/components/OddsPanel";
 import { CreateMarketPanel } from "@/components/CreateMarketPanel";
-import { MarketsAccordion } from "@/components/MarketsAccordion";
+import { MarketCard } from "@/components/MarketCard";
 import { BackLink, Card, SectionTitle, StatePanel } from "@/components/ui";
 
 export default function FixtureDetailPage({ params }: { params: { id: string } }) {
@@ -66,42 +66,48 @@ export default function FixtureDetailPage({ params }: { params: { id: string } }
 
       <ScoreHeader fixture={fixture} />
 
+      {/* odds + create */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* left: odds + create */}
-        <div className="space-y-6">
-          <Card>
-            <OddsPanel fixtureId={fixture.id} />
-          </Card>
-          <Card>
-            <CreateMarketPanel
-              fixture={fixture}
-              onCreated={(m) => {
-                setMarkets((prev) => {
-                  const rest = (prev ?? []).filter((x) => x.id !== m.id);
-                  return [m, ...rest];
-                });
-              }}
-            />
-          </Card>
-        </div>
-
-        {/* right: markets on this fixture */}
-        <div className="space-y-4">
-          <SectionTitle right={<span className="text-xs text-white/40">{markets?.length ?? 0}</span>}>
-            Markets on this fixture
-          </SectionTitle>
-
-          {markets == null ? (
-            <div className="h-40 animate-pulse rounded-2xl bg-white/5" />
-          ) : markets.length === 0 ? (
-            <Card className="text-sm text-white/50">
-              No markets yet — create the first one on the left. It goes live on-chain instantly.
-            </Card>
-          ) : (
-            <MarketsAccordion markets={markets} onDone={loadMarkets} />
-          )}
-        </div>
+        <Card>
+          <OddsPanel fixtureId={fixture.id} />
+        </Card>
+        <Card>
+          <CreateMarketPanel
+            fixture={fixture}
+            onCreated={(m) => {
+              setMarkets((prev) => {
+                const rest = (prev ?? []).filter((x) => x.id !== m.id);
+                return [m, ...rest];
+              });
+            }}
+          />
+        </Card>
       </div>
+
+      {/* markets on this fixture — horizontal cards, click one to stake */}
+      <section className="space-y-3">
+        <SectionTitle right={<span className="text-xs text-white/40">{markets?.length ?? 0}</span>}>
+          Markets on this fixture
+        </SectionTitle>
+
+        {markets == null ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/5" />
+            ))}
+          </div>
+        ) : markets.length === 0 ? (
+          <Card className="text-sm text-white/50">
+            No markets yet — create the first one above. It goes live on-chain instantly.
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {markets.map((m) => (
+              <MarketCard key={m.id} market={m} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
