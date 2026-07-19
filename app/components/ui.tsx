@@ -46,6 +46,7 @@ export function LiveBadge() {
 
 const STATUS_STYLE: Record<string, string> = {
   OPEN: "bg-neon/15 text-neon ring-neon/30",
+  LOCKED: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
   SETTLED: "bg-gold/15 text-gold ring-gold/30",
   REFUNDING: "bg-amber-500/15 text-amber-400 ring-amber-500/30",
 };

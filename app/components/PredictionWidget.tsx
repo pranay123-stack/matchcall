@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { Market } from "@/app/_lib/api";
-import { api, ApiError, marketTitle } from "@/app/_lib/api";
+import { api, ApiError, marketTitle, isLockPassed } from "@/app/_lib/api";
 import { signSendConfirm } from "@/app/_lib/solana";
 import { PoolBars } from "./PoolBars";
 import { Button, Spinner, cx } from "./ui";
@@ -27,7 +27,8 @@ export function PredictionWidget({
   const [txSig, setTxSig] = useState<string | null>(null);
   const [faucetBusy, setFaucetBusy] = useState(false);
 
-  const locked = market.status !== "OPEN";
+  const lockPassed = isLockPassed(market);
+  const locked = market.status !== "OPEN" || lockPassed;
   const amountNum = Number(amount);
   const amountValid = Number.isFinite(amountNum) && amountNum > 0;
   const busy = phase === "signing" || phase === "confirming" || phase === "recording";
@@ -101,7 +102,9 @@ export function PredictionWidget({
 
       {locked ? (
         <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/60">
-          This market is {market.status.toLowerCase()} — new predictions are closed.
+          {lockPassed
+            ? "This market is locked — the lock time has passed, so no new predictions. It stays locked until the match ends and the keeper settles it against TxLINE."
+            : `This market is ${market.status.toLowerCase()} — new predictions are closed.`}
         </div>
       ) : (
         <>

@@ -279,6 +279,22 @@ export function marketTitle(m: Market): string {
   return marketTypeLabel(m.marketType);
 }
 
+/**
+ * True when a market is still OPEN but its lock time has passed — no new
+ * predictions are accepted (the on-chain program rejects them), but it can't
+ * settle until the match finishes. The UI must show this as "locked", not open.
+ */
+export function isLockPassed(m: Market): boolean {
+  if (m.status !== "OPEN") return false;
+  const t = Date.parse(m.lockAt);
+  return Number.isFinite(t) && t <= Date.now();
+}
+
+/** Display status that accounts for the lock-passed limbo state. */
+export function displayStatus(m: Market): "OPEN" | "LOCKED" | "SETTLED" | "REFUNDING" {
+  return isLockPassed(m) ? "LOCKED" : m.status;
+}
+
 /** "Spain vs Argentina" when known, else a short fixture reference. */
 export function matchLabel(m: Market): string {
   if (m.homeTeam && m.awayTeam) return `${m.homeTeam} vs ${m.awayTeam}`;

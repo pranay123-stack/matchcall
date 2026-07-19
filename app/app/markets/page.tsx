@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Market } from "@/app/_lib/api";
+import { api, isLockPassed, type Market } from "@/app/_lib/api";
 import { MarketCard } from "@/components/MarketCard";
 import { Card, SectionTitle, StatePanel } from "@/components/ui";
 
@@ -30,7 +30,8 @@ export default function MarketsPage() {
     };
   }, []);
 
-  const open = (markets ?? []).filter((m) => m.status === "OPEN");
+  const open = (markets ?? []).filter((m) => m.status === "OPEN" && !isLockPassed(m));
+  const locked = (markets ?? []).filter((m) => isLockPassed(m));
   const resolved = (markets ?? []).filter((m) => m.status !== "OPEN");
 
   return (
@@ -65,6 +66,23 @@ export default function MarketsPage() {
           </Grid>
         )}
       </section>
+
+      {locked.length > 0 ? (
+        <section>
+          <SectionTitle right={<span className="text-xs text-white/40">{locked.length}</span>}>
+            Locked — awaiting settlement
+          </SectionTitle>
+          <p className="mb-3 text-xs text-white/40">
+            Lock time has passed, so no new predictions. These settle automatically when the match
+            ends and the keeper submits the TxLINE proof.
+          </p>
+          <Grid>
+            {locked.map((m) => (
+              <MarketCard key={m.id} market={m} />
+            ))}
+          </Grid>
+        </section>
+      ) : null}
 
       {resolved.length > 0 ? (
         <section>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
   api,
+  displayStatus,
   explorerAddr,
   explorerTx,
   fmtMusdc,
@@ -93,7 +94,7 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
             </div>
             <h1 className="text-xl font-extrabold text-white sm:text-2xl">{marketTitle(market)}</h1>
           </div>
-          <StatusPill status={market.status} />
+          <StatusPill status={displayStatus(market)} />
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

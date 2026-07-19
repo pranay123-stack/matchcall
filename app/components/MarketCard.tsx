@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Market } from "@/app/_lib/api";
-import { fmtMusdc, marketTitle, matchLabel, relativeTime } from "@/app/_lib/api";
+import { fmtMusdc, marketTitle, matchLabel, relativeTime, displayStatus, isLockPassed } from "@/app/_lib/api";
 import { StatusPill } from "./ui";
 
 export function MarketCard({ market }: { market: Market }) {
@@ -15,7 +15,7 @@ export function MarketCard({ market }: { market: Market }) {
           <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-neon/80">
             {matchLabel(market)}
           </span>
-          <StatusPill status={market.status} />
+          <StatusPill status={displayStatus(market)} />
         </div>
         <div className="mb-2 text-sm font-semibold text-white">{marketTitle(market)}</div>
 
@@ -45,7 +45,7 @@ export function MarketCard({ market }: { market: Market }) {
               </>
             ) : (
               <>
-                <div className="text-white/40">Locks</div>
+                <div className="text-white/40">{isLockPassed(market) ? "Locked" : "Locks"}</div>
                 <div className="text-white/70">{relativeTime(market.lockAt)}</div>
               </>
             )}
