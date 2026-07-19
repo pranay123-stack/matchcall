@@ -39,7 +39,18 @@ function keypairFromFile(p: string, label: string): Keypair {
 }
 
 export function deployerKeypair(): Keypair {
-  return keypairFromFile(config.DEPLOYER_KEYPAIR_PATH, "Deployer");
+  // Prefer a keypair file (local dev). In a container there is no keys file, so
+  // fall back to the inline authority secret env (deployer == authority here).
+  const p = config.DEPLOYER_KEYPAIR_PATH;
+  const full = resolvePath(p);
+  const up = path.join(process.cwd(), "..", p);
+  if (existsSync(full) || existsSync(up)) return keypairFromFile(p, "Deployer");
+  if (config.MARKET_AUTHORITY_SECRET) {
+    return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(config.MARKET_AUTHORITY_SECRET)));
+  }
+  throw new Error(
+    "Deployer keypair not found — set DEPLOYER_KEYPAIR_PATH (file) or MARKET_AUTHORITY_SECRET (inline array)."
+  );
 }
 
 export function musdcMintKeypair(): Keypair {
@@ -87,7 +98,9 @@ export async function airdropMusdc(
 ): Promise<{ signature: string; ata: string; amount: number }> {
   const connection = rpc();
   const payer = deployerKeypair();
-  const mint = musdcMintKeypair().publicKey;
+  // Use the mint pubkey from config so this works in a container without the
+  // mint keypair file (only the deployer/mint-authority key is needed to mint).
+  const mint = new PublicKey(config.MUSDC_MINT);
   const owner = new PublicKey(wallet);
 
   const ata = await getOrCreateAssociatedTokenAccount(
