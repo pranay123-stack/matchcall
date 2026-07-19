@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { Market } from "@/app/_lib/api";
-import { api, ApiError, marketTitle, toBaseUnits } from "@/app/_lib/api";
+import { api, ApiError, marketTitle } from "@/app/_lib/api";
 import { signSendConfirm } from "@/app/_lib/solana";
 import { PoolBars } from "./PoolBars";
 import { Button, Spinner, cx } from "./ui";
@@ -50,7 +50,7 @@ export function PredictionWidget({
         marketId: market.id,
         wallet,
         outcome,
-        amount: toBaseUnits(amountNum), // integer base units (6 decimals)
+        amount: amountNum, // whole mUSDC — the backend converts to base units
       });
 
       setPhase("confirming");

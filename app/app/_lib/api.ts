@@ -157,9 +157,11 @@ export const api = {
 export const MUSDC_DECIMALS = 6;
 export const MUSDC_UNIT = 1_000_000;
 
-/** base units -> human mUSDC string */
-export function fmtMusdc(baseUnits: number | null | undefined, opts?: { decimals?: number }): string {
-  const v = (baseUnits ?? 0) / MUSDC_UNIT;
+/** human mUSDC amount -> formatted string. The API already returns pool/amount
+ *  fields in whole mUSDC (the backend divides base units before serializing),
+ *  so this only formats — it does NOT divide again. */
+export function fmtMusdc(amount: number | null | undefined, opts?: { decimals?: number }): string {
+  const v = amount ?? 0;
   const d = opts?.decimals ?? 2;
   return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: d });
 }
