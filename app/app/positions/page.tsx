@@ -133,10 +133,10 @@ export default function PositionsPage() {
                   ) : null}
 
                   <Link
-                    href={`/markets/${e.market.id}`}
+                    href={`/positions/${e.market.id}`}
                     className="mt-3 flex items-center justify-end gap-1 border-t border-white/5 pt-2 text-xs font-semibold text-white/50 transition hover:text-neon"
                   >
-                    View market details →
+                    View position →
                   </Link>
                 </Card>
               );
