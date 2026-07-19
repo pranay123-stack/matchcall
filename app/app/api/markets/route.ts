@@ -20,7 +20,7 @@ const bodySchema = z.object({
     z.enum(["MATCH_WINNER", "TOTALS", "BTTS"]),
     z.number().int().min(0).max(2),
   ]),
-  lineParam: z.number().int().optional(),
+  lineParam: z.number().int().nullable().optional(),
   lockAt: z.union([z.string(), z.number()]),
 });
 

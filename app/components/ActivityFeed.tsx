@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { ActivityEvent } from "@/app/_lib/api";
 import { fmtMusdc, shortAddr } from "@/app/_lib/api";
-import { useSSE } from "@/app/_lib/useSSE";
 import { Card, SectionTitle } from "./ui";
 
 const ICON: Record<ActivityEvent["type"], string> = {
@@ -21,17 +20,37 @@ function ago(iso: string): string {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
+// Polls /api/activity every few seconds. We used SSE originally, but Railway's
+// HTTP/2 edge proxy drops long-lived event streams (ERR_HTTP2_PROTOCOL_ERROR),
+// so polling is the reliable path in production.
 export function ActivityFeed() {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [live, setLive] = useState(false);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const onMsg = useCallback((e: ActivityEvent) => {
-    setEvents((prev) => {
-      if (prev.some((x) => x.id === e.id)) return prev;
-      return [e, ...prev].slice(0, 25);
-    });
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/activity", { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        const data = (await res.json()) as { events?: ActivityEvent[] };
+        if (cancelled) return;
+        setEvents((data.events ?? []).slice(0, 25));
+        setLive(true);
+      } catch {
+        if (!cancelled) setLive(false);
+      }
+    }
+
+    poll();
+    timer.current = setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      if (timer.current) clearInterval(timer.current);
+    };
   }, []);
-
-  const { status } = useSSE<ActivityEvent>("/api/activity/stream", onMsg);
 
   return (
     <Card>
@@ -39,7 +58,7 @@ export function ActivityFeed() {
         right={
           <span className="flex items-center gap-1.5 text-[11px] text-white/40">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${status === "open" ? "animate-pulse bg-neon" : "bg-white/25"}`}
+              className={`h-1.5 w-1.5 rounded-full ${live ? "animate-pulse bg-neon" : "bg-white/25"}`}
             />
             live
           </span>
