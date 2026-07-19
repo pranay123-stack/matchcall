@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { impliedProbabilities, type OddsEvent, type OddsSelection } from "@/app/_lib/api";
 import { useSSE } from "@/app/_lib/useSSE";
 import { MeterBar, Spinner, cx } from "./ui";
@@ -39,6 +39,21 @@ export function OddsPanel({ fixtureId }: { fixtureId: string }) {
   const probs = useMemo(() => impliedProbabilities(selections), [selections]);
   const hasData = probs.length > 0;
 
+  // No bookmaker prices these devnet fixtures, and the odds SSE can drop behind
+  // Railway's proxy — so stop showing a "connecting" spinner forever. After a
+  // short grace period with no data, settle into a clean "no odds" state.
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    if (hasData) {
+      setGaveUp(false);
+      return;
+    }
+    const t = setTimeout(() => setGaveUp(true), 8000);
+    return () => clearTimeout(t);
+  }, [hasData]);
+  const unavailable = !hasData && (status === "error" || gaveUp);
+  const indicator = hasData ? "live odds" : unavailable ? "no odds feed" : "connecting";
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -52,10 +67,10 @@ export function OddsPanel({ fixtureId }: { fixtureId: string }) {
           <span
             className={cx(
               "h-1.5 w-1.5 rounded-full",
-              status === "open" ? "bg-neon" : status === "error" ? "bg-red-400" : "bg-white/30",
+              hasData ? "bg-neon" : unavailable ? "bg-white/30" : "bg-white/30",
             )}
           />
-          {status === "open" ? "live odds" : status === "error" ? "odds offline" : "connecting"}
+          {indicator}
         </span>
       </div>
 
@@ -79,10 +94,15 @@ export function OddsPanel({ fixtureId }: { fixtureId: string }) {
             Derived from live decimal odds (1/odds, normalized to 100%).
           </p>
         </div>
+      ) : unavailable ? (
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-white/50">
+          No live odds for this fixture — no bookmaker prices it on the free TxLINE devnet feed.
+          The staking pools below are the real market signal.
+        </div>
       ) : (
         <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-white/50">
           <Spinner className="text-white/40" />
-          Waiting for odds… the market maker hasn&apos;t priced this fixture yet.
+          Connecting to the odds feed…
         </div>
       )}
     </div>
