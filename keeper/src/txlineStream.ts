@@ -16,9 +16,18 @@ export type FixtureState = {
 
 export class FixtureTracker {
   private state = new Map<string, FixtureState>();
+  private lastEventMs: number | null = null;
 
   get(fixtureId: string): FixtureState | undefined {
     return this.state.get(fixtureId);
+  }
+
+  watchedCount(): number {
+    return this.state.size;
+  }
+
+  lastEventIso(): string | null {
+    return this.lastEventMs ? new Date(this.lastEventMs).toISOString() : null;
   }
 
   /** Is this fixture proven final AND do we have a real score sequence to prove it? */
@@ -29,6 +38,7 @@ export class FixtureTracker {
 
   ingest(ev: NormalizedScoreEvent): void {
     if (!ev.fixtureId) return;
+    this.lastEventMs = Date.now();
     const prev = this.state.get(ev.fixtureId);
     const final = prev?.final || isTerminalScoreEvent(ev);
     // Keep the newest numeric seq we have seen (proofs need a real sequence).

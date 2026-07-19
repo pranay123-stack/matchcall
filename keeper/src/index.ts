@@ -9,6 +9,27 @@ const log = makeLogger("keeper");
 // Idempotency + concurrency guards (in-memory; on-chain state is source of truth).
 const settled = new Set<string>(); // marketIds we have confirmed SETTLED/REFUNDING
 const inFlight = new Set<string>(); // marketIds currently being settled
+let lastSettle: { marketId: string; signature: string; at: string } | null = null;
+
+/** Report liveness to the backend so the dashboard can show keeper status. */
+async function heartbeat(tracker: FixtureTracker): Promise<void> {
+  try {
+    await fetch(`${config.apiBase}/api/keeper/heartbeat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        streamConnected: true,
+        fixturesWatched: tracker.watchedCount(),
+        lastEventAt: tracker.lastEventIso(),
+        settledCount: settled.size,
+        lastSettle,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    /* backend may be down; ignore */
+  }
+}
 
 async function pollOnce(tracker: FixtureTracker): Promise<void> {
   let markets: Market[];
@@ -52,6 +73,7 @@ async function settleMarket(market: Market, seq: string): Promise<void> {
   const res = await requestBackendSettle(market.id, seq);
   if (res.ok) {
     settled.add(market.id);
+    lastSettle = { marketId: market.id, signature: res.signature, at: new Date().toISOString() };
     log.decision(`${tag} -> tx ${res.signature || "(recorded)"} via backend`);
     return;
   }
@@ -64,6 +86,7 @@ async function settleMarket(market: Market, seq: string): Promise<void> {
     const direct = await directSettle(market, seq);
     if (direct.ok) {
       settled.add(market.id);
+      lastSettle = { marketId: market.id, signature: direct.signature, at: new Date().toISOString() };
       log.decision(`${tag} -> tx ${direct.signature} via direct-settle`);
       return;
     }
@@ -108,6 +131,7 @@ async function main(): Promise<void> {
     } catch (err) {
       log.error("poll iteration failed", err);
     }
+    void heartbeat(tracker);
     await sleep(config.pollIntervalMs, controller.signal);
   }
 }

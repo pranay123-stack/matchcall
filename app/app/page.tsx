@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Fixture, type Market } from "@/app/_lib/api";
 import { FixtureCard } from "@/components/FixtureCard";
 import { MarketCard } from "@/components/MarketCard";
+import { KeeperStatus } from "@/components/KeeperStatus";
 import { Card, LiveBadge, SectionTitle, StatePanel } from "@/components/ui";
 
 export default function Dashboard() {
@@ -47,6 +48,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       <Hero liveCount={live.length} marketCount={(markets ?? []).length} />
+
+      <KeeperStatus />
 
       {error && !fixtures ? (
         <StatePanel kind="error" title="Couldn't load fixtures" detail={error} />

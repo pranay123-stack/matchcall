@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "MatchCall — Live World Cup Prediction Market",
@@ -16,9 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <Nav />
           <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
-          <footer className="mx-auto max-w-6xl px-4 pb-10 pt-6 text-center text-xs text-white/30 sm:px-6">
-            MatchCall · Solana devnet · settlement proved by TxLINE on-chain sports data
-          </footer>
+          <Footer />
         </Providers>
       </body>
     </html>

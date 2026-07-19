@@ -9,6 +9,7 @@ import {
   type Receipt,
 } from "@/app/_lib/api";
 import { BackLink, Card, StatePanel } from "@/components/ui";
+import { ProofVerify } from "@/components/ProofVerify";
 
 export default function ReceiptPage({ params }: { params: { id: string } }) {
   const marketId = params.id;
@@ -138,6 +139,9 @@ export default function ReceiptPage({ params }: { params: { id: string } }) {
         </h2>
         <p className="text-sm leading-relaxed text-white/80">{explanation}</p>
       </Card>
+
+      {/* verify-it-yourself */}
+      <ProofVerify receipt={receipt} />
 
       {/* settlement tx */}
       <Card>

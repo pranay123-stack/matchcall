@@ -112,6 +112,16 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 export type WalletEntry = { market: Market; position: Position };
 
+export type KeeperStatus = {
+  online: boolean;
+  streamConnected: boolean;
+  fixturesWatched: number;
+  lastEventAt: string | null;
+  settledCount: number;
+  lastSettle: { marketId: string; signature: string; at: string } | null;
+  lastHeartbeat: string | null;
+};
+
 export const api = {
   getFixtures: () => jsonFetch<{ fixtures: Fixture[] }>("/api/fixtures"),
   getMarkets: () => jsonFetch<{ markets: Market[] }>("/api/markets"),
@@ -150,6 +160,7 @@ export const api = {
     }),
   getPositions: (wallet: string) =>
     jsonFetch<{ positions: WalletEntry[] }>(`/api/positions?wallet=${encodeURIComponent(wallet)}`),
+  keeperStatus: () => jsonFetch<KeeperStatus>("/api/keeper/status"),
   faucet: (wallet: string) =>
     jsonFetch<{ ok?: boolean; signature?: string }>("/api/faucet", {
       method: "POST",
@@ -189,6 +200,13 @@ export function explorerTx(sig: string): string {
 export function explorerAddr(addr: string): string {
   return `https://explorer.solana.com/address/${addr}?cluster=devnet`;
 }
+
+// Public on-chain identifiers (safe to expose; used for "verify on-chain" links).
+export const PROGRAM_ID =
+  process.env.NEXT_PUBLIC_PROGRAM_ID ?? "DuB3yJQMPWCESJoEzShBWt1Jc3Q6j6DXLyi1XpAB6EQ2";
+export const MUSDC_MINT =
+  process.env.NEXT_PUBLIC_MUSDC_MINT ?? "EgkrEEpXKn61tdWDTJj9bDd68oW4ifiUC4M5uqiAhv9j";
+export const TXLINE_PROGRAM_ID = "6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J";
 
 export function marketTypeLabel(t: MarketType): string {
   switch (t) {
