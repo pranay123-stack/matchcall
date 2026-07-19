@@ -4,6 +4,12 @@ import { getMarket, insertMarket, listMarkets } from "@/lib/db";
 import { toMarketDTO } from "@/lib/marketView";
 import { createMarket, marketTypeTag, type MarketTypeTag } from "@/lib/onchain/program";
 import { txlineClient } from "@/lib/txline/client";
+import { recordActivity } from "@/lib/activity";
+
+function typeLabel(tag: MarketTypeTag, lineParam: number | null): string {
+  if (tag === 1) return `Total Goals O/U ${((lineParam ?? 0) / 2).toFixed(1)}`;
+  return tag === 0 ? "Match Winner" : "Both Teams To Score";
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,6 +97,13 @@ export async function POST(request: Request) {
       seedHex: onchain.seedHex,
       homeTeam: fixture?.homeTeam ?? null,
       awayTeam: fixture?.awayTeam ?? null,
+    });
+
+    recordActivity({
+      type: "market_created",
+      marketId: id,
+      match: fixture ? `${fixture.homeTeam} vs ${fixture.awayTeam}` : `Fixture ${body.fixtureId}`,
+      market: typeLabel(marketType, lineParam),
     });
 
     return json({ market: await toMarketDTO(row) }, 201);

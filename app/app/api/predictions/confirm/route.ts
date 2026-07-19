@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { json, fail } from "@/lib/http";
 import { getMarket, setPosition } from "@/lib/db";
-import { verifyPosition } from "@/lib/onchain/program";
+import { verifyPosition, outcomeLabels, fromBaseUnits } from "@/lib/onchain/program";
 import { toPositionDTO } from "@/lib/marketView";
+import { recordActivity } from "@/lib/activity";
+
+function typeLabel(t: number, lineParam: number | null): string {
+  if (t === 1) return `Total Goals O/U ${((lineParam ?? 0) / 2).toFixed(1)}`;
+  return t === 0 ? "Match Winner" : "Both Teams To Score";
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +42,19 @@ export async function POST(request: Request) {
       outcome: body.outcome,
       amount: Number(verified.amount),
       signature: body.signature,
+    });
+
+    recordActivity({
+      type: "prediction_placed",
+      marketId: market.id,
+      match:
+        market.homeTeam && market.awayTeam
+          ? `${market.homeTeam} vs ${market.awayTeam}`
+          : `Fixture ${market.fixtureId}`,
+      market: typeLabel(market.marketType, market.lineParam),
+      wallet: body.wallet,
+      outcome: outcomeLabels(market.marketType)[body.outcome] ?? `#${body.outcome}`,
+      amount: fromBaseUnits(verified.amount),
     });
 
     return json({ ok: true, position: toPositionDTO(row) });

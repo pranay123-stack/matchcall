@@ -112,6 +112,52 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 export type WalletEntry = { market: Market; position: Position };
 
+export type Stats = {
+  totals: {
+    volume: number;
+    markets: number;
+    openMarkets: number;
+    settledMarkets: number;
+    stakers: number;
+    predictions: number;
+  };
+  topPredictors: { wallet: string; staked: number; bets: number }[];
+  biggestMarkets: {
+    id: string;
+    homeTeam: string | null;
+    awayTeam: string | null;
+    marketType: MarketType;
+    lineParam: number | null;
+    totalPool: number;
+    status: MarketStatus;
+  }[];
+};
+
+export type ActivityEvent =
+  | { id: number; at: string; type: "market_created"; marketId: string; match: string; market: string }
+  | {
+      id: number;
+      at: string;
+      type: "prediction_placed";
+      marketId: string;
+      match: string;
+      market: string;
+      wallet: string;
+      outcome: string;
+      amount: number;
+    }
+  | {
+      id: number;
+      at: string;
+      type: "market_settled";
+      marketId: string;
+      match: string;
+      market: string;
+      finalScore: string;
+      winner: string;
+      signature: string;
+    };
+
 export type KeeperStatus = {
   online: boolean;
   streamConnected: boolean;
@@ -161,6 +207,7 @@ export const api = {
   getPositions: (wallet: string) =>
     jsonFetch<{ positions: WalletEntry[] }>(`/api/positions?wallet=${encodeURIComponent(wallet)}`),
   keeperStatus: () => jsonFetch<KeeperStatus>("/api/keeper/status"),
+  getStats: () => jsonFetch<Stats>("/api/stats"),
   faucet: (wallet: string) =>
     jsonFetch<{ ok?: boolean; signature?: string }>("/api/faucet", {
       method: "POST",

@@ -239,6 +239,10 @@ export function listPositionsByWallet(wallet: string): PositionRow[] {
   return prep(`SELECT * FROM positions WHERE wallet = ?`).all(wallet) as PositionRow[];
 }
 
+export function listAllPositions(): PositionRow[] {
+  return prep(`SELECT * FROM positions`).all() as PositionRow[];
+}
+
 export function markPositionClaimed(marketId: string, wallet: string, outcome: number): void {
   prep(`UPDATE positions SET claimed = 1 WHERE marketId = ? AND wallet = ? AND outcome = ?`).run(
     marketId,

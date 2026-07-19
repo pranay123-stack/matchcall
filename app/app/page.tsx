@@ -5,6 +5,8 @@ import { api, type Fixture, type Market } from "@/app/_lib/api";
 import { FixtureCard } from "@/components/FixtureCard";
 import { MarketCard } from "@/components/MarketCard";
 import { KeeperStatus } from "@/components/KeeperStatus";
+import { StatsPanel } from "@/components/StatsPanel";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { Card, LiveBadge, SectionTitle, StatePanel } from "@/components/ui";
 
 export default function Dashboard() {
@@ -50,6 +52,8 @@ export default function Dashboard() {
       <Hero liveCount={live.length} marketCount={(markets ?? []).length} />
 
       <KeeperStatus />
+
+      <StatsPanel />
 
       {error && !fixtures ? (
         <StatePanel kind="error" title="Couldn't load fixtures" detail={error} />
@@ -98,6 +102,9 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {/* LIVE ACTIVITY */}
+      <ActivityFeed />
 
       {/* UPCOMING */}
       <section>

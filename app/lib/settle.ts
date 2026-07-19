@@ -6,9 +6,10 @@
 // calls this. It never trusts a caller-supplied score — the proof is fetched
 // straight from TxLINE and the winning outcome is derived on-chain.
 import { getMarket, recordSettlement, type MarketRow } from "./db.js";
-import { settleMarketWithProof } from "./onchain/program.js";
+import { settleMarketWithProof, outcomeLabels } from "./onchain/program.js";
 import { parseTxlineScoreProof } from "./txline/proof.js";
 import { isFinalisedScoreEvent, txlineClient } from "./txline/client.js";
+import { recordActivity } from "./activity.js";
 
 export type SettlementResult = {
   signature: string;
@@ -63,5 +64,18 @@ export async function settleMarketById(id: string): Promise<{ market: MarketRow;
     settleSignature: settlement.signature,
     proofJson: JSON.stringify(rawProof),
   });
+
+  const label = (t: number, l: number | null) =>
+    t === 1 ? `Total Goals O/U ${((l ?? 0) / 2).toFixed(1)}` : t === 0 ? "Match Winner" : "Both Teams To Score";
+  recordActivity({
+    type: "market_settled",
+    marketId: row.id,
+    match: row.homeTeam && row.awayTeam ? `${row.homeTeam} vs ${row.awayTeam}` : `Fixture ${row.fixtureId}`,
+    market: label(row.marketType, row.lineParam),
+    finalScore: `${settlement.finalHomeGoals}–${settlement.finalAwayGoals}`,
+    winner: outcomeLabels(row.marketType)[settlement.winningOutcome] ?? `#${settlement.winningOutcome}`,
+    signature: settlement.signature,
+  });
+
   return { market: updated ?? row, settlement };
 }
