@@ -31,7 +31,22 @@ pari-mutuel payout. No trusted admin ever picks the winner.
 - 🤖 **Automatic settlement** — a keeper watches the live scores SSE and settles at full-time, no human trigger.
 - 🧾 **Verifiable receipts** — every settled market shows the TxLINE score → Merkle proof → on-chain settlement tx, re-verifiable by anyone.
 - 🎛️ **Product-complete** — Dashboard, Fixtures, Markets, Positions, Receipts, live analytics/leaderboards, a real-time activity feed, wallet connect, claim.
-- ✅ **Test-backed & deploy-ready** — 6 passing devnet integration tests + a one-command Docker deploy.
+- ✅ **Test-backed & deploy-ready** — 14 passing tests (6 on-chain + 8 settlement-logic) + a one-command Docker deploy.
+
+---
+
+## Demo
+
+- 🌐 **Live app:** **https://matchcall-production.up.railway.app** — open it, connect
+  Phantom (set to **Devnet**), click **"Get test mUSDC"** (gives you mUSDC *and* gas),
+  and stake. Fully self-serve; nothing to install.
+- 🎥 **Video (≤5 min):** _[[ add link ]]_ — script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+
+**What the demo shows:**
+1. Live fixtures + real-time analytics, leaderboards, and an activity feed.
+2. Connect wallet → one-click **mUSDC + gas** → stake into the on-chain escrow (appears in the live feed instantly).
+3. Your **Positions** and a market's **verifiable receipt** (score → Merkle proof → on-chain tx).
+4. **Trustless settlement** — the `validate_stat_v2` CPI explained on the *How it works* page, and backed by the 14 passing tests. At full-time the keeper settles automatically.
 
 ---
 

@@ -118,6 +118,10 @@ cd tests && npm test                  # 6 passing on devnet — incl. the CPI se
 > can *only* resolve to what was cryptographically proven. Deployed, live, and
 > trustlessly settled. That's MatchCall."
 
+**Presenter action (credibility beat, ~5 sec):** briefly flash the **GitHub repo**
+(`github.com/pranay123-stack/matchcall`) — the README's worked example + Mermaid
+settlement diagram + the Tests section — then the end card.
+
 **End card:**
 - Live: `matchcall-production.up.railway.app`
 - Repo: `github.com/pranay123-stack/matchcall`
