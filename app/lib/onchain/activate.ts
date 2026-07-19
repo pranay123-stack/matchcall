@@ -14,6 +14,7 @@ import {
   TransactionInstruction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import fs from "node:fs";
 import nacl from "tweetnacl";
 import { config } from "../config.js";
@@ -25,9 +26,6 @@ const DEVNET = {
   programId: new PublicKey("6pW64gN1s2uqjHkn1unFeEjAwJkPGHoppGvS715wyP2J"),
   txlTokenMint: new PublicKey("4Zao8ocPhmMgq7PdsYWyxvqySMGx7xb9cMftPMkEokRG"),
 };
-
-const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPF5s9W3eqrFHG3ew7hC");
-const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
 const SERVICE_LEVEL_ID = 1;
 const DURATION_WEEKS = 4;
@@ -85,10 +83,20 @@ async function fetchJson(url: string, init?: RequestInit): Promise<any> {
   return body;
 }
 
-async function fetchDevnetIdl(): Promise<anchor.Idl> {
+async function fetchDevnetIdl(provider: anchor.AnchorProvider): Promise<anchor.Idl> {
+  // Prefer the IDL published ON-CHAIN by the TxLINE program — robust to docs
+  // format changes (the devnet.md page no longer embeds a JSON block).
+  try {
+    const onchain = await anchor.Program.fetchIdl(DEVNET.programId, provider);
+    if (onchain) return onchain as anchor.Idl;
+  } catch {
+    /* fall through to docs scrape */
+  }
   const markdown = await fetch("https://txline.txodds.com/documentation/programs/devnet.md").then((r) => r.text());
   const match = markdown.match(/```json[^\n]*\n([\s\S]*?)```/);
-  if (!match) throw new Error("Could not find TxLINE devnet IDL JSON in docs");
+  if (!match) {
+    throw new Error("Could not load TxLINE devnet IDL (on-chain fetch failed and no JSON block in docs)");
+  }
   return JSON.parse(match[1]) as anchor.Idl;
 }
 
@@ -99,7 +107,7 @@ export async function activateTxline(envPath: string): Promise<{ jwt: string; ap
   const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
   anchor.setProvider(provider);
 
-  const idl = await fetchDevnetIdl();
+  const idl = await fetchDevnetIdl(provider);
   const program = new anchor.Program(idl, provider);
   if (!program.programId.equals(DEVNET.programId)) {
     throw new Error(`Loaded program ${program.programId.toBase58()} does not match TxLINE devnet program`);
