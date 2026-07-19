@@ -103,7 +103,12 @@ export class TxlineClient {
     return data
       .map(normalizeFixture)
       .filter((f): f is Fixture => f !== null)
-      .filter((f) => f.competition.toLowerCase().includes("world cup"))
+      // Free tier covers World Cup + International Friendlies — show both so
+      // there are multiple real matches to build markets on.
+      .filter((f) => {
+        const c = f.competition.toLowerCase();
+        return c.includes("world cup") || c.includes("friendl");
+      })
       .filter((f) => {
         // Keep live and upcoming; drop cancelled/long-finished.
         if (f.status === "cancelled") return false;
