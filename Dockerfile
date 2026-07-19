@@ -51,13 +51,19 @@ ENV NODE_ENV=production \
     DATABASE_PATH=/data/matchcall.db
 
 COPY --from=app-builder /app ./
+# The reindex script lives at repo-root scripts/ and is invoked as
+# `tsx ../scripts/...` from /app, so it must sit at /scripts in the image.
+COPY scripts/ /scripts/
 
 # SQLite lives on a mounted volume so data persists across restarts/redeploys.
 RUN mkdir -p /data
 VOLUME ["/data"]
 
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Rebuild the DB index from on-chain truth on boot (idempotent; non-fatal if the
+# RPC is briefly unreachable), then serve. This makes a fresh/ephemeral DB show
+# every real market with live pools.
+CMD ["sh", "-c", "npm run reindex || true; npm run start"]
 
 # ---------------------------------------------------------------------------
 # 3) Keeper stage — the standalone settlement process (tsx runtime, no build).
