@@ -110,6 +110,8 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type WalletEntry = { market: Market; position: Position };
+
 export const api = {
   getFixtures: () => jsonFetch<{ fixtures: Fixture[] }>("/api/fixtures"),
   getMarkets: () => jsonFetch<{ markets: Market[] }>("/api/markets"),
@@ -141,11 +143,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  claimIntent: (body: { marketId: string; wallet: string }) =>
+  claimIntent: (body: { marketId: string; wallet: string; outcome?: number }) =>
     jsonFetch<{ transactionBase64: string }>("/api/claims/intent", {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  getPositions: (wallet: string) =>
+    jsonFetch<{ positions: WalletEntry[] }>(`/api/positions?wallet=${encodeURIComponent(wallet)}`),
   faucet: (wallet: string) =>
     jsonFetch<{ ok?: boolean; signature?: string }>("/api/faucet", {
       method: "POST",

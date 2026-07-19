@@ -7,7 +7,15 @@ import { api, ApiError, explorerTx } from "@/app/_lib/api";
 import { signSendConfirm } from "@/app/_lib/solana";
 import { Button, Spinner, cx } from "./ui";
 
-export function ClaimButton({ market, onDone }: { market: Market; onDone?: () => void }) {
+export function ClaimButton({
+  market,
+  outcome,
+  onDone,
+}: {
+  market: Market;
+  outcome?: number;
+  onDone?: () => void;
+}) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
   const [busy, setBusy] = useState(false);
@@ -25,7 +33,7 @@ export function ClaimButton({ market, onDone }: { market: Market; onDone?: () =>
     setMsg(null);
     try {
       const wallet = publicKey.toBase58();
-      const { transactionBase64 } = await api.claimIntent({ marketId: market.id, wallet });
+      const { transactionBase64 } = await api.claimIntent({ marketId: market.id, wallet, outcome });
       const sig = await signSendConfirm(connection, sendTransaction, transactionBase64);
       setMsg({ ok: true, text: `${verb} succeeded.`, sig });
       onDone?.();

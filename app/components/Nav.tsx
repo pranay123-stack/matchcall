@@ -27,6 +27,7 @@ export function Nav() {
           <NavLink href="/">Dashboard</NavLink>
           <NavLink href="/fixtures">Fixtures</NavLink>
           <NavLink href="/markets">Markets</NavLink>
+          <NavLink href="/positions">Positions</NavLink>
           <NavLink href="/receipts">Receipts</NavLink>
         </nav>
 
